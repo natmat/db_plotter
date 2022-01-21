@@ -80,24 +80,31 @@ class Route:
 
           if up and up.strip():
             self.routes_up.append(route)
-          else:
+          elif down and down.strip():
             self.routes_down.append((route))
-
-          if up and up.strip():
-              folium.PolyLine([(self.waypoints[wp_name][:2], self.waypoints[up][:2])],
-                              color="#FFD700",
-                              weight=10,
-                              line_opacity=0.5,
-                              tooltip=wp_name + " ^^UP^^ " + up + ": " + str(up_dist) + "m"
-                              ).add_to(map)
           else:
-              if down and down.strip():
-                  folium.PolyLine([(self.waypoints[wp_name][:2], self.waypoints[down][:2])],
-                                  color="#87CEEB",
-                                  weight=30,
-                                  fill_opacity=0.5,
-                                  tooltip=wp_name + " vvDOWNvv " + down + ": " + str(down_dist)
-                                  ).add_to(map)
+            print("Error with route: " + route)
+
+        for r in self.routes_up:
+          wp_name, up, up_dist, down, down_dist = r
+          print("U: ")
+          print(r)
+          folium.PolyLine([(self.waypoints[wp_name][:2], self.waypoints[up][:2])],
+                          color="#FFD700",
+                          weight=30,
+                          line_opacity=0.5,
+                          tooltip=wp_name + " ^^UP^^ " + up + ": " + str(up_dist) + "m"
+                          ).add_to(map)
+        for r in self.routes_down:
+          wp_name, up, up_dist, down, down_dist = r
+          print("D: ")
+          print(r)
+          folium.PolyLine([(self.waypoints[wp_name][:2], self.waypoints[down][:2])],
+                          color="#87CEEB",
+                          weight=10,
+                          fill_opacity=0.5,
+                          tooltip=wp_name + " vvDOWNvv " + down + ": " + str(down_dist)
+                          ).add_to(map)
       except Exception as e:
           print("Error: ")
           print(e)
