@@ -30,22 +30,10 @@ class Route:
             c = self.db.cursor()
             self.waypoints = {}
             self.odometry = {}
-            self.routes = {}
 
-            for wp in c.execute("select waypoint_name, waypoint_lat, waypoint_long, waypoint_radius from waypoint"):
+            for wp in c.execute("select waypoint_name, waypoint_lat, waypoint_long, waypoint_radius from waypoint "
+                                "order by waypoint_name asc"):
                 self.waypoints[wp[0]] = (wp[1], wp[2], wp[3])
-
-            for row in c.execute("select waypoint_name, up_station_name, up_distance, down_station_name, down_distance from route"):
-                wp_name, up, up_dist, down, down_dist = row
-                if wp_name in self.routes:
-                    if up and up.strip():
-                        self.routes[wp_name][0:2] = [up, up_dist]
-                    else:
-
-                        self.routes[wp_name][2:4] = [down, down_dist]
-                else:
-                    self.routes[wp_name] = list(row[1:])
-
 
         except Exception as e:
             print(e)
@@ -75,40 +63,44 @@ class Route:
         lng_range = (min(gps, key=lambda item: item[1])[1],
                      max(gps, key=lambda item: item[1])[1])
 
-        map = folium.Map(prefer_canvas=True, zoom_start=11, location=(lat_mean, lng_mean))
+        map = folium.Map(prefer_canvas=True, zoom_start=10, location=(lat_mean, lng_mean))
 
         return map
 
     def plot_routes(self, map):
-        for d in 'down', 'up':
-            for r in self.routes:
-                print(r + ": " + str(self.routes[r]))
+      try:
+        c = self.db.cursor()
+        self.routes = {}
+        self.routes_up = []
+        self.routes_down = []
 
-                x = self.routes[r][0:4]
-                wp_up, up_dist, wp_down, down_dist = self.routes[r][0:4]
-                try:
-                    if d == 'up':
-                        # If the up/down is valid, that plot between the points
-                        if wp_up and wp_up.strip():
-                            folium.PolyLine([(self.waypoints[r][:2], self.waypoints[wp_up][:2])],
-                                            color="#FFD700",
-                                            weight=10,
-                                            line_opacity=0.5,
-                                            tooltip=r + " >>up>> " + wp_up + ": " + str(up_dist) + "m"
-                                            ).add_to(map)
-                    else:
-                        if wp_down and wp_down.strip():
-                            folium.PolyLine([(self.waypoints[r][:2], self.waypoints[wp_down][:2])],
-                                            color="#87CEEB",
-                                            weight=30,
-                                            fill_opacity=0.5,
-                                            tooltip=r + " >>down>> " + wp_down + ": " + str(down_dist)
-                                            ).add_to(map)
-                except Exception as e:
-                    lat, lng, r = self.waypoints[r]
-                    folium.Circle((lat, lng), radius=50, color='Orange').add_to(map)
-                    print("Error: plotting route data: " + str(r))
-                    print(self.routes[r][0:4])
+        for route in c.execute("select waypoint_name, up_station_name, up_distance, down_station_name, "
+                             "down_distance from route order by waypoint_name asc"):
+          wp_name, up, up_dist, down, down_dist = route
+
+          if up and up.strip():
+            self.routes_up.append(route)
+          else:
+            self.routes_down.append((route))
+
+          if up and up.strip():
+              folium.PolyLine([(self.waypoints[wp_name][:2], self.waypoints[up][:2])],
+                              color="#FFD700",
+                              weight=10,
+                              line_opacity=0.5,
+                              tooltip=wp_name + " ^^UP^^ " + up + ": " + str(up_dist) + "m"
+                              ).add_to(map)
+          else:
+              if down and down.strip():
+                  folium.PolyLine([(self.waypoints[wp_name][:2], self.waypoints[down][:2])],
+                                  color="#87CEEB",
+                                  weight=30,
+                                  fill_opacity=0.5,
+                                  tooltip=wp_name + " vvDOWNvv " + down + ": " + str(down_dist)
+                                  ).add_to(map)
+      except Exception as e:
+          print("Error: ")
+          print(e)
 
 
     def plot_kml(self):
