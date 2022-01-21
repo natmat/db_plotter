@@ -59,7 +59,7 @@ class Route:
         lat, lng, r = self.waypoints[wp]
         # print (lat, lng, r)
         folium.Marker([lat, lng], popup=wp + ", gf=" + str(r) + "m").add_to(map)
-        folium.Circle((lat, lng), radius=r, color='blue').add_to(map)
+        folium.Circle((lat, lng), radius=r, color='red').add_to(map)
         # folium.Circle((lat, lng), radius=r*5, color='yellow').add_to(map)
 
       # print (lat_range, lng_range)
@@ -80,32 +80,35 @@ class Route:
         return map
 
     def plot_routes(self, map):
-        for r in self.routes:
-            print(r + ": " + str(self.routes[r]))
+        for d in 'down', 'up':
+            for r in self.routes:
+                print(r + ": " + str(self.routes[r]))
 
-            x = self.routes[r][0:4]
-            wp_up, up_dist, wp_down, down_dist = self.routes[r][0:4]
-            try:
-                # If the up/down is valid, that plot between the points
-                if wp_up and wp_up.strip():
-                    folium.PolyLine([(self.waypoints[r][:2], self.waypoints[wp_up][:2])],
-                                    color="#FFD700",
-                                    weight=10,
-                                    line_opacity=0.9,
-                                    tooltip=r + " >>up>> " + wp_up + ": " + str(up_dist) + "m"
-                                    ).add_to(map)
-                if wp_down and wp_down.strip():
-                    folium.PolyLine([(self.waypoints[r][:2], self.waypoints[wp_down][:2])],
-                                    color="#87CEEB",
-                                    weight=30,
-                                    fill_opacity=0.9,
-                                    tooltip=r + " >>down>> " + wp_down + ": " + str(down_dist)
-                                    ).add_to(map)
-            except Exception as e:
-                lat, lng, r = self.waypoints[r]
-                folium.Circle((lat, lng), radius=50, color='Orange').add_to(map)
-                print("Error: plotting route data: " + str(r))
-                print(self.routes[r][0:4])
+                x = self.routes[r][0:4]
+                wp_up, up_dist, wp_down, down_dist = self.routes[r][0:4]
+                try:
+                    if d == 'up':
+                        # If the up/down is valid, that plot between the points
+                        if wp_up and wp_up.strip():
+                            folium.PolyLine([(self.waypoints[r][:2], self.waypoints[wp_up][:2])],
+                                            color="#FFD700",
+                                            weight=10,
+                                            line_opacity=0.5,
+                                            tooltip=r + " >>up>> " + wp_up + ": " + str(up_dist) + "m"
+                                            ).add_to(map)
+                    else:
+                        if wp_down and wp_down.strip():
+                            folium.PolyLine([(self.waypoints[r][:2], self.waypoints[wp_down][:2])],
+                                            color="#87CEEB",
+                                            weight=30,
+                                            fill_opacity=0.5,
+                                            tooltip=r + " >>down>> " + wp_down + ": " + str(down_dist)
+                                            ).add_to(map)
+                except Exception as e:
+                    lat, lng, r = self.waypoints[r]
+                    folium.Circle((lat, lng), radius=50, color='Orange').add_to(map)
+                    print("Error: plotting route data: " + str(r))
+                    print(self.routes[r][0:4])
 
 
     def plot_kml(self):
