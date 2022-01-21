@@ -104,7 +104,7 @@ class Route:
             except Exception as e:
                 lat, lng, r = self.waypoints[r]
                 folium.Circle((lat, lng), radius=50, color='Orange').add_to(map)
-                print("Error: plotting route data: " + r)
+                print("Error: plotting route data: " + str(r))
                 print(self.routes[r][0:4])
 
 
