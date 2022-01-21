@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# Script to plot the waypoints, GFs and routes
+
 import folium
 import inspect
 import os
