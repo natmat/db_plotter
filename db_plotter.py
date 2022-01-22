@@ -170,7 +170,7 @@ def main(argv):
     r.plot_waypoints(map)
 
     map.save('map.html')
-    print("map.html")
+    print("\nDone: open map.html in browser")
 
     # try:
     #     r.move_between( start_at, go_to, direction, points )
