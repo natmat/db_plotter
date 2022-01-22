@@ -35,7 +35,6 @@ class Route:
                                 "order by waypoint_name asc"):
                 wp_name, lat, lng, r = wp
                 self.waypoints[wp_name.lower()] = (lat, lng, r)
-                print("+ " + wp_name)
 
         except Exception as e:
             print(e)
@@ -51,8 +50,6 @@ class Route:
             folium.Marker([lat, lng], popup=wp + ", gf=" + str(r) + "m").add_to(map)
             folium.Circle((lat, lng), radius=r, color='red').add_to(map)
             # folium.Circle((lat, lng), radius=r*5, color='yellow').add_to(map)
-
-        # print (lat_range, lng_range)
 
     def init_map(self):
         gps = list(self.waypoints.values())
@@ -86,18 +83,26 @@ class Route:
                 continue
 
             if up and up.strip():
-                print("u wp:" + wp_name)
+                # print("u wp:" + wp_name)
                 self.routes_up.append((wp_name, up))
             elif down and down.strip():
-                print("d wp:" + wp_name)
+                # print("d wp:" + wp_name)
                 self.routes_down.append((wp_name, down))
             else:
-                print("Error with route: " + route)
+                print("Error with route: '" + route + "'")
 
         for r in self.routes_up:
             wp, up = r
+
+            if wp not in self.waypoints:
+              print("Error: WP '" + wp + "' unknown")
+              continue
+            if up not in self.waypoints:
+              print("Error: " + wp + ": UP '" + up + "' unknown")
+              continue
+
             if (up, wp) in self.routes_down:
-                print("BI   wp:" + wp + " ^ " + up + " v " + down)
+                # print("BI   wp:" + wp + " ^ " + up + " v " + down)
                 self.routes_down.remove((up, wp))
                 folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[up][:2])],
                                 color="black",
@@ -106,9 +111,7 @@ class Route:
                                 tooltip=wp + " ^^UP^^ " + up
                                 ).add_to(map)
             else:
-                print("UPPP wp:" + wp + " ^ " + up)
-                print(self.waypoints[wp])
-                print(self.waypoints[wp][:2])
+                # print("UP   wp:" + wp + " ^ " + up)
                 folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[up][:2])],
                                 color="green",
                                 weight=5,
@@ -118,7 +121,14 @@ class Route:
 
         for r in self.routes_down:
             wp, down = r
-            print("DOWN wp:" + wp + " v " + down)
+            # print("DOWN wp:" + wp + " v " + down)
+
+            if wp not in self.waypoints:
+              print("Error: WP '" + wp + "' unknown")
+              continue
+            if down not in self.waypoints:
+              print("Error: " + wp + ": DOWN '" + down + "' unknown")
+              continue
 
             # print(self.waypoints[wp])
             # print(self.waypoints[wp][:2], self.waypoints[down][:2])
@@ -165,7 +175,7 @@ def main(argv):
     map = r.init_map()
 
     r.plot_routes(map)
-    # r.plot_waypoints(map)
+    r.plot_waypoints(map)
 
     map.save('map.html')
     print("map.html")
