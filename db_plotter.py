@@ -6,9 +6,8 @@ import folium
 import inspect
 import os
 from polycircles import polycircles
-import simplekml
-import sqlite3
 import sys
+import sqlite3
 
 
 def log_error():
@@ -20,7 +19,6 @@ class Route:
         try:
             self.db = sqlite3.connect('asdo_config.db')
             self.load_data()
-            self.earth_radius = 6371000.0
         except Exception as e:
             print(repr(e))
             sys.exit(1)
@@ -31,6 +29,7 @@ class Route:
             self.waypoints = {}
             self.odometry = {}
 
+            # select the waypoint info from DB
             for wp in c.execute("select waypoint_name, waypoint_lat, waypoint_long, waypoint_radius from waypoint "
                                 "order by waypoint_name asc"):
                 wp_name, lat, lng, r = wp
@@ -42,16 +41,15 @@ class Route:
             raise
 
     def plot_waypoints(self, map):
-        # self.plot_kml()
-
         for wp in self.waypoints:
             lat, lng, r = self.waypoints[wp]
-            # print (lat, lng, r)
+
+            # Add wp marker to the map
             folium.Marker([lat, lng], popup=wp + ", gf=" + str(r) + "m").add_to(map)
             folium.Circle((lat, lng), radius=r, color='red').add_to(map)
-            # folium.Circle((lat, lng), radius=r*5, color='yellow').add_to(map)
 
     def init_map(self):
+        # Centre the map on the central wp location
         gps = list(self.waypoints.values())
 
         lat_mean = sum(v[0] for v in gps) / float(len(gps))
@@ -66,12 +64,12 @@ class Route:
         return map
 
     def plot_routes(self, map):
-        # try:
         c = self.db.cursor()
         self.routes = {}
         self.routes_up = []
         self.routes_down = []
 
+        # Read (lowercase wp) routes into up/down arrays
         for route in c.execute("select waypoint_name, up_station_name, up_distance, down_station_name, "
                                "down_distance from route order by waypoint_name asc"):
             try:
@@ -92,6 +90,7 @@ class Route:
         for r in self.routes_up:
             wp, up = r
 
+            # Error if route wp not found
             if wp not in self.waypoints:
               print("Error: WP '" + wp + "' unknown")
               continue
@@ -132,34 +131,11 @@ class Route:
                             tooltip=wp + " v " + down
                             ).add_to(map)
 
-    def plot_kml(self):
-        kml = simplekml.Kml()
-        for w in self.waypoints:
-            lat, lng, r = self.waypoints[w]
-            # print(w, lng, lat)
-            kml.newpoint(name=w, coords=[(lng, lat)])
-
-            polycircle = polycircles.Polycircle(latitude=lat,
-                                                longitude=lng,
-                                                radius=r,
-                                                number_of_vertices=36)
-            pol = kml.newpolygon(name=w, outerboundaryis=polycircle.to_kml())
-            pol.style.polystyle.color = simplekml.Color.changealphaint(200, simplekml.Color.green)
-        kml.save("db_plot.kml")
-
-
 def show_help():
+    # Nothing here... yet
     print("")
-    print(os.path.basename(__file__) +
-          ' -s <start_at> -e <go_to> [-d <direction>] [-p <points>]')
+    print(os.path.basename(__file__))
     print("")
-
-
-def createPlacemark(kmlDoc, row, order):
-    placemarkElement = kmlDoc.createElement('Placemark')
-    extElement = kmlDoc.createElement('ExtendedData')
-    placemarkElement.appendChild(extElement)
-
 
 def main(argv):
     r = Route('')
@@ -171,11 +147,6 @@ def main(argv):
 
     map.save('map.html')
     print("\nDone: open map.html in browser")
-
-    # try:
-    #     r.move_between( start_at, go_to, direction, points )
-    #     print(e)
-
 
 if __name__ == "__main__":
     main(sys.argv[1:])
