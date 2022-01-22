@@ -33,7 +33,9 @@ class Route:
 
             for wp in c.execute("select waypoint_name, waypoint_lat, waypoint_long, waypoint_radius from waypoint "
                                 "order by waypoint_name asc"):
-                self.waypoints[wp[0]] = (wp[1], wp[2], wp[3])
+                wp_name, lat, lng, r = wp
+                self.waypoints[wp_name.lower()] = (lat, lng, r)
+                print("+ " + wp_name)
 
         except Exception as e:
             print(e)
@@ -41,17 +43,16 @@ class Route:
             raise
 
     def plot_waypoints(self, map):
-      # self.plot_kml()
+        # self.plot_kml()
 
-      for wp in self.waypoints:
-        lat, lng, r = self.waypoints[wp]
-        # print (lat, lng, r)
-        folium.Marker([lat, lng], popup=wp + ", gf=" + str(r) + "m").add_to(map)
-        folium.Circle((lat, lng), radius=r, color='red').add_to(map)
-        # folium.Circle((lat, lng), radius=r*5, color='yellow').add_to(map)
+        for wp in self.waypoints:
+            lat, lng, r = self.waypoints[wp]
+            # print (lat, lng, r)
+            folium.Marker([lat, lng], popup=wp + ", gf=" + str(r) + "m").add_to(map)
+            folium.Circle((lat, lng), radius=r, color='red').add_to(map)
+            # folium.Circle((lat, lng), radius=r*5, color='yellow').add_to(map)
 
-      # print (lat_range, lng_range)
-
+        # print (lat_range, lng_range)
 
     def init_map(self):
         gps = list(self.waypoints.values())
@@ -68,47 +69,66 @@ class Route:
         return map
 
     def plot_routes(self, map):
-      try:
+        # try:
         c = self.db.cursor()
         self.routes = {}
         self.routes_up = []
         self.routes_down = []
 
         for route in c.execute("select waypoint_name, up_station_name, up_distance, down_station_name, "
-                             "down_distance from route order by waypoint_name asc"):
-          wp_name, up, up_dist, down, down_dist = route
+                               "down_distance from route order by waypoint_name asc"):
+            try:
+                wp_name, up, up_dist, down, down_dist = route
+                [wp_name, up, down] = [x.lower() for x in (wp_name, up, down)]
+            except Exception as e:
+                print("sql route")
+                print(e)
+                continue
 
-          if up and up.strip():
-            self.routes_up.append(route)
-          elif down and down.strip():
-            self.routes_down.append((route))
-          else:
-            print("Error with route: " + route)
+            if up and up.strip():
+                print("u wp:" + wp_name)
+                self.routes_up.append((wp_name, up))
+            elif down and down.strip():
+                print("d wp:" + wp_name)
+                self.routes_down.append((wp_name, down))
+            else:
+                print("Error with route: " + route)
 
         for r in self.routes_up:
-          wp_name, up, up_dist, down, down_dist = r
-          print("U: ")
-          print(r)
-          folium.PolyLine([(self.waypoints[wp_name][:2], self.waypoints[up][:2])],
-                          color="#FFD700",
-                          weight=30,
-                          line_opacity=0.5,
-                          tooltip=wp_name + " ^^UP^^ " + up + ": " + str(up_dist) + "m"
-                          ).add_to(map)
-        for r in self.routes_down:
-          wp_name, up, up_dist, down, down_dist = r
-          print("D: ")
-          print(r)
-          folium.PolyLine([(self.waypoints[wp_name][:2], self.waypoints[down][:2])],
-                          color="#87CEEB",
-                          weight=10,
-                          fill_opacity=0.5,
-                          tooltip=wp_name + " vvDOWNvv " + down + ": " + str(down_dist)
-                          ).add_to(map)
-      except Exception as e:
-          print("Error: ")
-          print(e)
+            wp, up = r
+            if (up, wp) in self.routes_down:
+                print("BI   wp:" + wp + " ^ " + up + " v " + down)
+                self.routes_down.remove((up, wp))
+                folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[up][:2])],
+                                color="black",
+                                weight=5,
+                                line_opacity=0.5,
+                                tooltip=wp + " ^^UP^^ " + up
+                                ).add_to(map)
+            else:
+                print("UPPP wp:" + wp + " ^ " + up)
+                print(self.waypoints[wp])
+                print(self.waypoints[wp][:2])
+                folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[up][:2])],
+                                color="green",
+                                weight=5,
+                                line_opacity=0.5,
+                                tooltip=wp + " ^^UP^^ " + up
+                                ).add_to(map)
 
+        for r in self.routes_down:
+            wp, down = r
+            print("DOWN wp:" + wp + " v " + down)
+
+            # print(self.waypoints[wp])
+            # print(self.waypoints[wp][:2], self.waypoints[down][:2])
+            # if (down, wp) not in self.routes_up:
+            folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[down][:2])],
+                            color="yellow",
+                            weight=5,
+                            line_opacity=0.5,
+                            tooltip=wp_name + " ^^DOWN^^ " + down
+                            ).add_to(map)
 
     def plot_kml(self):
         kml = simplekml.Kml()
@@ -138,15 +158,17 @@ def createPlacemark(kmlDoc, row, order):
     extElement = kmlDoc.createElement('ExtendedData')
     placemarkElement.appendChild(extElement)
 
+
 def main(argv):
     r = Route('')
 
     map = r.init_map()
 
     r.plot_routes(map)
-    r.plot_waypoints(map)
+    # r.plot_waypoints(map)
 
     map.save('map.html')
+    print("map.html")
 
     # try:
     #     r.move_between( start_at, go_to, direction, points )
