@@ -83,10 +83,8 @@ class Route:
                 continue
 
             if up and up.strip():
-                # print("u wp:" + wp_name)
                 self.routes_up.append((wp_name, up))
             elif down and down.strip():
-                # print("d wp:" + wp_name)
                 self.routes_down.append((wp_name, down))
             else:
                 print("Error with route: '" + route + "'")
@@ -102,26 +100,23 @@ class Route:
               continue
 
             if (up, wp) in self.routes_down:
-                # print("BI   wp:" + wp + " ^ " + up + " v " + down)
                 self.routes_down.remove((up, wp))
                 folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[up][:2])],
                                 color="black",
                                 weight=5,
                                 line_opacity=0.5,
-                                tooltip=wp + " ^^UP^^ " + up
+                                tooltip=wp + " <-> " + up
                                 ).add_to(map)
             else:
-                # print("UP   wp:" + wp + " ^ " + up)
                 folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[up][:2])],
                                 color="green",
                                 weight=5,
                                 line_opacity=0.5,
-                                tooltip=wp + " ^^UP^^ " + up
+                                tooltip=wp + " ^ " + up
                                 ).add_to(map)
 
         for r in self.routes_down:
             wp, down = r
-            # print("DOWN wp:" + wp + " v " + down)
 
             if wp not in self.waypoints:
               print("Error: WP '" + wp + "' unknown")
@@ -130,14 +125,11 @@ class Route:
               print("Error: " + wp + ": DOWN '" + down + "' unknown")
               continue
 
-            # print(self.waypoints[wp])
-            # print(self.waypoints[wp][:2], self.waypoints[down][:2])
-            # if (down, wp) not in self.routes_up:
             folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[down][:2])],
                             color="yellow",
                             weight=5,
                             line_opacity=0.5,
-                            tooltip=wp_name + " ^^DOWN^^ " + down
+                            tooltip=wp + " v " + down
                             ).add_to(map)
 
     def plot_kml(self):
