@@ -10,8 +10,8 @@ import sys
 import folium
 
 
-def log_error():
-    print("Err: " + inspect.currentframe().f_code.co_name + "()")
+# def log_error():
+#     print("Error: " + inspect.currentframe().f_code.co_name + "()")
 
 
 class Route:
@@ -68,7 +68,7 @@ class Route:
             print("Error: WP '" + wp + "' unknown")
             return False
         if to not in self.waypoints:
-            print("Error: " + wp + " " + direction.upper() + ": '" + to + "' unknown")
+            print("Error: " + wp + ": " + direction.upper() + " '" + to + "' unknown")
             return False
 
     def plot_routes(self, map):
@@ -122,7 +122,7 @@ class Route:
 
         for r in self.routes_down:
             wp, down = r
-            if not self.wp_valid(wp, down, 'UP'):
+            if not self.wp_valid(wp, down, 'DOWN'):
                 continue
 
             folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[down][:2])],
