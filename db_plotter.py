@@ -2,12 +2,12 @@
 
 # Script to plot the waypoints, GFs and routes
 
-import folium
 import inspect
 import os
-from polycircles import polycircles
-import sys
 import sqlite3
+import sys
+
+import folium
 
 
 def log_error():
@@ -20,7 +20,7 @@ class Route:
             self.db = sqlite3.connect('asdo_config.db')
             self.load_data()
         except Exception as e:
-            print(repr(e))
+            print("Error: sqlite3 connect failed: " + repr(e))
             sys.exit(1)
 
     def load_data(self):
@@ -63,6 +63,14 @@ class Route:
 
         return map
 
+    def wp_valid(self, wp, to, direction):
+        if wp not in self.waypoints:
+            print("Error: WP '" + wp + "' unknown")
+            return False
+        if to not in self.waypoints:
+            print("Error: " + wp + " " + direction.upper() + ": '" + to + "' unknown")
+            return False
+
     def plot_routes(self, map):
         c = self.db.cursor()
         self.routes = {}
@@ -89,20 +97,16 @@ class Route:
 
         for r in self.routes_up:
             wp, up = r
-
-            # Error if route wp not found
-            if wp not in self.waypoints:
-              print("Error: WP '" + wp + "' unknown")
-              continue
-            if up not in self.waypoints:
-              print("Error: " + wp + ": UP '" + up + "' unknown")
-              continue
+            if not self.wp_valid(wp, up, "UP"):
+                continue
 
             if (up, wp) in self.routes_down:
                 self.routes_down.remove((up, wp))
                 folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[up][:2])],
                                 color="black",
                                 weight=5,
+                                fill_opacity=0.5,
+                                opacity=1,
                                 line_opacity=0.5,
                                 tooltip=wp + " <-> " + up
                                 ).add_to(map)
@@ -110,34 +114,37 @@ class Route:
                 folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[up][:2])],
                                 color="green",
                                 weight=5,
+                                fill_opacity=0.5,
+                                opacity=1,
                                 line_opacity=0.5,
-                                tooltip=wp + " ^ " + up
+                                tooltip=wp + " UP " + up
                                 ).add_to(map)
 
         for r in self.routes_down:
             wp, down = r
-
-            if wp not in self.waypoints:
-              print("Error: WP '" + wp + "' unknown")
-              continue
-            if down not in self.waypoints:
-              print("Error: " + wp + ": DOWN '" + down + "' unknown")
-              continue
+            if not self.wp_valid(wp, down, 'UP'):
+                continue
 
             folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[down][:2])],
                             color="yellow",
                             weight=5,
+                            fill_opacity=0.5,
+                            opacity=1,
                             line_opacity=0.5,
-                            tooltip=wp + " v " + down
+                            tooltip=wp + " DOWN " + down
                             ).add_to(map)
 
+
 def show_help():
-    # Nothing here... yet
-    print("")
+    print("Usage:")
     print(os.path.basename(__file__))
+    print("Reads the asdo_config.db file and plots the wp and routes in a map")
     print("")
 
+
 def main(argv):
+    show_help()
+
     r = Route('')
 
     map = r.init_map()
@@ -147,6 +154,7 @@ def main(argv):
 
     map.save('map.html')
     print("\nDone: open map.html in browser")
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
