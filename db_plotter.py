@@ -9,15 +9,76 @@ import sys
 
 import folium
 
+colour_wp = 'red'
 
 # def log_error():
 #     print("Error: " + inspect.currentframe().f_code.co_name + "()")
 
+class WayPoint:
+    waypoints = {}
+
+    @classmethod
+    def insert(cls, wp):
+        if wp.name not in cls.waypoints:
+            cls.waypoints[wp.name] = (wp.lat, wp.lng, wp.r)
+        else:
+            print("Error: can't add duplicate wp: " + wp.name)
+
+    def __init__(self, name, lat, lng, r):
+        self.name = name.lower()
+        self.lat = lat
+        self.lng = lng
+        self.r = r
+        WayPoint.insert(self)
+
+    @classmethod
+    def get_centre(self):
+        if len(WayPoint.waypoints) == 0:
+            print("Error: no waypoints")
+            sys.exit(1)
+
+        gps = list(self.waypoints.values())
+        lat_mean = sum(v[0] for v in gps) / float(len(gps))
+        lng_mean = sum(v[1] for v in gps) / float(len(gps))
+        return (lat_mean, lng_mean)
+
+    @classmethod
+    def get_range(cls):
+        gps = list(WayPoint.waypoints.values())
+        lat_range = (min(gps, key=lambda item: item[0])[0],
+                     max(gps, key=lambda item: item[0])[0])
+        lng_range = (min(gps, key=lambda item: item[1])[1],
+                     max(gps, key=lambda item: item[1])[1])
+        return (lat_range, lng_range)
+
+    @classmethod
+    def plot_waypoints(cls, map):
+        for wp in WayPoint.waypoints:
+            # Add wp marker to the map
+            lat, lng, r = WayPoint.waypoints[wp]
+            folium.Marker([lat, lng], popup=wp + ", gf=" + str(r) + "m").add_to(map)
+            folium.Circle((lat, lng), radius=r, color=colour_wp).add_to(map)
+
+    @classmethod
+    def exists(cls, name):
+        return (name in WayPoint.waypoints)
+
+
+class Map:
+    def __init__(self, lat, lng):
+        # Centre the map on the central wp location
+        self.map = folium.Map(prefer_canvas=True, zoom_start=10, location=(lat, lng))
+
 
 class Route:
-    def __init__(self, cfg):
+    
+    routes = {}
+    routes_up = []
+    routes_down = []
+    
+    def __init__(self, config):
         try:
-            self.db = sqlite3.connect('asdo_config.db')
+            self.db = sqlite3.connect(config)
             self.load_data()
         except Exception as e:
             print("Error: sqlite3 connect failed: " + repr(e))
@@ -26,56 +87,36 @@ class Route:
     def load_data(self):
         try:
             c = self.db.cursor()
-            self.waypoints = {}
-            self.odometry = {}
 
             # select the waypoint info from DB
             for wp in c.execute("select waypoint_name, waypoint_lat, waypoint_long, waypoint_radius from waypoint "
                                 "order by waypoint_name asc"):
-                wp_name, lat, lng, r = wp
-                self.waypoints[wp_name.lower()] = (lat, lng, r)
+                name, lat, lng, r = wp
+                WayPoint(name.lower(), lat, lng, r)
 
         except Exception as e:
             print(e)
             print("You need a valid asdo_config.db in pwd: " + os.getcwd())
             raise
 
-    def plot_waypoints(self, map):
-        for wp in self.waypoints:
-            lat, lng, r = self.waypoints[wp]
-
-            # Add wp marker to the map
-            folium.Marker([lat, lng], popup=wp + ", gf=" + str(r) + "m").add_to(map)
-            folium.Circle((lat, lng), radius=r, color='red').add_to(map)
-
     def init_map(self):
         # Centre the map on the central wp location
-        gps = list(self.waypoints.values())
-
-        lat_mean = sum(v[0] for v in gps) / float(len(gps))
-        lng_mean = sum(v[1] for v in gps) / float(len(gps))
-        lat_range = (min(gps, key=lambda item: item[0])[0],
-                     max(gps, key=lambda item: item[0])[0])
-        lng_range = (min(gps, key=lambda item: item[1])[1],
-                     max(gps, key=lambda item: item[1])[1])
-
+        lat_mean, lng_mean = WayPoint.get_centre()
         map = folium.Map(prefer_canvas=True, zoom_start=10, location=(lat_mean, lng_mean))
 
         return map
 
-    def wp_valid(self, wp, to, direction):
-        if wp not in self.waypoints:
+    @classmethod
+    def is_valid(cls, wp, to, direction):
+        if not WayPoint.exists(wp):
             print("Error: WP '" + wp + "' unknown")
             return False
-        if to not in self.waypoints:
+        if not WayPoint.exists(to):
             print("Error: " + wp + ": " + direction.upper() + " '" + to + "' unknown")
             return False
 
     def plot_routes(self, map):
         c = self.db.cursor()
-        self.routes = {}
-        self.routes_up = []
-        self.routes_down = []
 
         # Read (lowercase wp) routes into up/down arrays
         for route in c.execute("select waypoint_name, up_station_name, up_distance, down_station_name, "
@@ -89,19 +130,19 @@ class Route:
                 continue
 
             if up and up.strip():
-                self.routes_up.append((wp_name, up))
+                Route.routes_up.append((wp_name, up))
             elif down and down.strip():
-                self.routes_down.append((wp_name, down))
+                Route.routes_down.append((wp_name, down))
             else:
                 print("Error with route: '" + route + "'")
 
-        for r in self.routes_up:
+        for r in Route.routes_up:
             wp, up = r
-            if not self.wp_valid(wp, up, "UP"):
+            if not Route.is_valid(wp, up, "UP"):
                 continue
 
-            if (up, wp) in self.routes_down:
-                self.routes_down.remove((up, wp))
+            if (up, wp) in Route.routes_down:
+                Route.routes_down.remove((up, wp))
                 folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[up][:2])],
                                 color="black",
                                 weight=5,
@@ -120,9 +161,9 @@ class Route:
                                 tooltip=wp + " UP " + up
                                 ).add_to(map)
 
-        for r in self.routes_down:
+        for r in Route.routes_down:
             wp, down = r
-            if not self.wp_valid(wp, down, 'DOWN'):
+            if not Route.is_valid(wp, down, 'DOWN'):
                 continue
 
             folium.PolyLine([(self.waypoints[wp][:2], self.waypoints[down][:2])],
@@ -145,12 +186,12 @@ def show_help():
 def main(argv):
     show_help()
 
-    r = Route('')
+    route = Route('asdo_config.db')
 
-    map = r.init_map()
-
-    r.plot_routes(map)
-    r.plot_waypoints(map)
+    lat, lng = WayPoint.get_centre()
+    map = Map(lat, lng)
+    route.plot_routes(map)
+    WayPoint.plot_waypoints(map)
 
     map.save('map.html')
     print("\nDone: open map.html in browser")
