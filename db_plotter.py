@@ -146,19 +146,13 @@ class Route:
                 folium.PolyLine([(WayPoint.waypoints[wp][:2], WayPoint.waypoints[up][:2])],
                                 color=colour_route_bi,
                                 weight=5,
-                                fill_opacity=0.5,
-                                opacity=1,
-                                line_opacity=0.5,
-                                tooltip=wp + " BI " + up
+                                tooltip="[" + wp + "] UpDown [" + up + "]"
                                 ).add_to(map)
             else:
                 folium.PolyLine([(WayPoint.waypoints[wp][:2], WayPoint.waypoints[up][:2])],
                                 color=colour_route_up,
                                 weight=5,
-                                fill_opacity=0.5,
-                                opacity=1,
-                                line_opacity=0.5,
-                                tooltip=wp + " UP " + up
+                                tooltip="[" + wp + "] Up [" + up + "]"
                                 ).add_to(map)
 
         for r in Route.routes_down:
@@ -172,10 +166,7 @@ class Route:
             folium.PolyLine([(WayPoint.waypoints[wp][:2], WayPoint.waypoints[down][:2])],
                             color=colour_route_down,
                             weight=5,
-                            fill_opacity=0.5,
-                            opacity=1,
-                            line_opacity=0.5,
-                            tooltip=wp + " DOWN " + down
+                            tooltip="[" + wp + "] Down [" + down + "]"
                             ).add_to(map)
 
 
