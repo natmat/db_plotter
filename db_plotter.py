@@ -7,6 +7,7 @@ import sqlite3
 import sys
 
 import folium
+from folium import DivIcon
 
 colour_wp =         'blue'
 colour_route_bi =   'black'
@@ -60,6 +61,16 @@ class WayPoint:
             lat, lng, r = cls.waypoints[wp]
             folium.Marker([lat, lng], popup=wp + ", gf=" + str(r) + "m").add_to(map)
             folium.Circle((lat, lng), radius=r, color=colour_wp).add_to(map)
+
+            # Add text to name WP
+            folium.Marker(
+                [lat, lng],
+                icon=DivIcon(
+                    icon_size=(250, 36),
+                    icon_anchor=(0, 0),
+                    html='<div style="font-size: 10pt">' + wp + '</div>',
+                )
+            ).add_to(map)
 
     @classmethod
     def exists(cls, name):
@@ -176,6 +187,9 @@ def show_help():
     print("Reads the asdo_config.db file and plots the wp and routes in a map")
     print("")
 
+
+import asyncio
+import time
 
 def main(argv):
     show_help()
