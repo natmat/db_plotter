@@ -9,10 +9,11 @@ import sys
 import folium
 from folium import DivIcon
 
-colour_wp =         'blue'
-colour_route_bi =   'black'
+colour_wp = 'blue'
+colour_route_bi = 'black'
 colour_route_down = 'red'
-colour_route_up =   'green'
+colour_route_up = 'green'
+
 
 # def log_error():
 #     print("Error: " + inspect.currentframe().f_code.co_name + "()")
@@ -77,18 +78,17 @@ class WayPoint:
         return (name in cls.waypoints)
 
 
-class Map (folium.folium.Map):
+class Map(folium.folium.Map):
     def __init__(self, lat, lng):
         # Centre the map on the central wp location
         folium.Map(prefer_canvas=True, zoom_start=10, location=(lat, lng))
 
 
 class Route:
-    
     routes = {}
     routes_up = []
     routes_down = []
-    
+
     def __init__(self, config):
         try:
             self.db = sqlite3.connect(config)
@@ -182,14 +182,19 @@ class Route:
 
 
 def show_help():
-    print("Usage:")
-    print(os.path.basename(__file__))
-    print("Reads the asdo_config.db file and plots the wp and routes in a map")
+    print("Usage: ", os.path.basename(__file__))
+    print("Reads the ./asdo_config.db file and plots the wp and routes in a map\n"
+          "It plots the up/down/bi-directional routes:\n"
+          "     red:   up\n"
+          "     green: down\n"
+          "     black: up & down\n"
+          )
     print("")
 
 
 import asyncio
 import time
+
 
 def main(argv):
     show_help()
